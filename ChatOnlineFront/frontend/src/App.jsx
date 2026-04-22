@@ -81,7 +81,8 @@ export default function Chat() {
           const body = JSON.parse(msg.body);
 
           if (pendingRef.current) {
-            addMessage(pendingRef.current.text, pendingRef.current.time, true);
+            // Usa o horário retornado pelo servidor
+            addMessage(pendingRef.current.text, formatTime(body.localDateTime), true);
             pendingRef.current = null;
           } else {
             addMessage(body.message, formatTime(body.localDateTime), false);
@@ -112,8 +113,7 @@ export default function Chat() {
     const text = input.trim();
     if (!text || !connected) return;
 
-    const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    pendingRef.current = { text, time };
+    pendingRef.current = { text };
 
     stompRef.current.publish({
       destination: DESTINATION,
