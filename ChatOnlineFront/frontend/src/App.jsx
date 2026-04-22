@@ -166,7 +166,8 @@ export default function Chat() {
   const stompRef = useRef(null);
   const bottomRef = useRef(null);
   const idRef = useRef(0);
-  const nomeRef = useRef(localStorage.getItem("chat_nome") || ""); // inicializa direto do localStorage
+  const nomeRef = useRef(localStorage.getItem("chat_nome") || "");
+  const pendingSent = useRef(new Set()); // rastreia textos enviados para evitar duplicata do echo
 
   const addMessage = useCallback((text, time, isMine, sender) => {
     setMessages(prev => [...prev, { id: idRef.current++, text, time, isMine, sender }]);
@@ -202,12 +203,17 @@ export default function Chat() {
         client.subscribe(TOPIC, (msg) => {
           const body = JSON.parse(msg.body);
           const senderName = body.usuario || "";
-          const isMine = !!nomeRef.current && senderName === nomeRef.current;
+          const key = `${senderName}:${body.message}`;
+          // Se essa mensagem foi enviada por mim, ignora o echo
+          if (pendingSent.current.has(key)) {
+            pendingSent.current.delete(key);
+            return;
+          }
           addMessage(
             body.message,
             formatTime(body.localDateTime),
-            isMine,
-            isMine ? null : (senderName || null)
+            false,
+            senderName || null
           );
         });
       },
@@ -243,9 +249,14 @@ export default function Chat() {
     const text = input.trim();
     if (!text || !connected) return;
 
+    const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const key = `${nomeRef.current}:${text}`;
+    pendingSent.current.add(key); // marca como enviada para ignorar o echo
+    addMessage(text, time, true, null);
+
     stompRef.current.publish({
       destination: DESTINATION,
-      body: JSON.stringify({ message: text, usuario: nome }),
+      body: JSON.stringify({ message: text, usuario: nomeRef.current }),
     });
 
     setInput("");
