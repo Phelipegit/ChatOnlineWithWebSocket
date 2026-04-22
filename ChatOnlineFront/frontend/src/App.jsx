@@ -166,28 +166,33 @@ export default function Chat() {
   const stompRef = useRef(null);
   const bottomRef = useRef(null);
   const idRef = useRef(0);
-  const pendingRef = useRef(null);
+  const nomeRef = useRef(localStorage.getItem("chat_nome") || ""); // inicializa direto do localStorage
 
   const addMessage = useCallback((text, time, isMine, sender) => {
     setMessages(prev => [...prev, { id: idRef.current++, text, time, isMine, sender }]);
   }, []);
 
+  // Carrega histórico
   useEffect(() => {
     fetch(`${BASE_URL}/api/messages`)
       .then(r => r.json())
       .then(data => {
-        const history = data.map(m => ({
-          id: idRef.current++,
-          text: m.message,
-          time: formatTime(m.localDateTime),
-          isMine: false,
-          sender: m.usuario || null, // 1️⃣ trocado de m.nome para m.usuario
-        }));
+        const history = data.map(m => {
+          const isMine = m.usuario === nomeRef.current;
+          return {
+            id: idRef.current++,
+            text: m.message,
+            time: formatTime(m.localDateTime),
+            isMine,
+            sender: isMine ? null : (m.usuario || null),
+          };
+        });
         setMessages(history);
       })
       .catch(() => {});
   }, []);
 
+  // Conexão WebSocket
   useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
@@ -196,13 +201,14 @@ export default function Chat() {
         setStatus("conectado");
         client.subscribe(TOPIC, (msg) => {
           const body = JSON.parse(msg.body);
-
-          if (pendingRef.current) {
-            addMessage(pendingRef.current.text, pendingRef.current.time, true, null);
-            pendingRef.current = null;
-          } else {
-            addMessage(body.message, formatTime(body.localDateTime), false, body.usuario || null); // 2️⃣ trocado de body.nome para body.usuario
-          }
+          const senderName = body.usuario || "";
+          const isMine = !!nomeRef.current && senderName === nomeRef.current;
+          addMessage(
+            body.message,
+            formatTime(body.localDateTime),
+            isMine,
+            isMine ? null : (senderName || null)
+          );
         });
       },
       onDisconnect: () => {
@@ -221,12 +227,14 @@ export default function Chat() {
     return () => { client.deactivate(); };
   }, [addMessage]);
 
+  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const handleNameConfirm = (name) => {
     localStorage.setItem("chat_nome", name);
+    nomeRef.current = name; // atualiza ref imediatamente, sem esperar useEffect
     setNome(name);
     setShowModal(false);
   };
@@ -235,12 +243,9 @@ export default function Chat() {
     const text = input.trim();
     if (!text || !connected) return;
 
-    const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    pendingRef.current = { text, time };
-
     stompRef.current.publish({
       destination: DESTINATION,
-      body: JSON.stringify({ message: text, usuario: nome }), // 3️⃣ trocado de nome para usuario: nome
+      body: JSON.stringify({ message: text, usuario: nome }),
     });
 
     setInput("");
