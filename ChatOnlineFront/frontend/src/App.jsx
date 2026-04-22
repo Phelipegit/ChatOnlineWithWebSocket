@@ -13,109 +13,7 @@ function formatTime(dateTimeStr) {
   return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
-function NameModal({ onConfirm }) {
-  const [value, setValue] = useState("");
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  const handleConfirm = () => {
-    const trimmed = value.trim();
-    if (!trimmed) return;
-    onConfirm(trimmed);
-  };
-
-  const handleKey = (e) => {
-    if (e.key === "Enter") handleConfirm();
-  };
-
-  return (
-    <div style={{
-      position: "absolute",
-      inset: 0,
-      background: "rgba(0,0,0,0.35)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 100,
-      borderRadius: "var(--border-radius-lg)",
-    }}>
-      <div style={{
-        background: "var(--color-background-primary)",
-        border: "0.5px solid var(--color-border-tertiary)",
-        borderRadius: 16,
-        padding: "28px 28px 24px",
-        width: 280,
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-      }}>
-        <div>
-          <p style={{
-            margin: 0,
-            fontSize: 15,
-            fontWeight: 600,
-            color: "var(--color-text-primary)",
-            fontFamily: "var(--font-sans)",
-          }}>
-            Bem-vindo ao Chat 👋
-          </p>
-          <p style={{
-            margin: "6px 0 0",
-            fontSize: 13,
-            color: "var(--color-text-tertiary)",
-            fontFamily: "var(--font-sans)",
-          }}>
-            Como quer ser chamado?
-          </p>
-        </div>
-
-        <input
-          ref={inputRef}
-          value={value}
-          onChange={e => setValue(e.target.value)}
-          onKeyDown={handleKey}
-          placeholder="Seu nome..."
-          maxLength={30}
-          style={{
-            padding: "9px 14px",
-            border: "0.5px solid var(--color-border-secondary)",
-            borderRadius: 10,
-            fontSize: 14,
-            background: "var(--color-background-secondary)",
-            color: "var(--color-text-primary)",
-            outline: "none",
-            fontFamily: "var(--font-sans)",
-          }}
-        />
-
-        <button
-          onClick={handleConfirm}
-          disabled={!value.trim()}
-          style={{
-            padding: "10px",
-            borderRadius: 10,
-            border: "none",
-            background: value.trim() ? "#378ADD" : "#B4B2A9",
-            color: "#fff",
-            fontSize: 14,
-            fontWeight: 500,
-            cursor: value.trim() ? "pointer" : "not-allowed",
-            fontFamily: "var(--font-sans)",
-            transition: "background 0.2s",
-          }}
-        >
-          Entrar
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Message({ text, time, isMine, sender }) {
+function Message({ text, time, isMine }) {
   return (
     <div style={{
       display: "flex",
@@ -124,18 +22,6 @@ function Message({ text, time, isMine, sender }) {
       maxWidth: "72%",
       alignSelf: isMine ? "flex-end" : "flex-start",
     }}>
-      {!isMine && sender && (
-        <span style={{
-          fontSize: 11,
-          fontWeight: 600,
-          color: "var(--color-text-secondary)",
-          marginBottom: 3,
-          paddingLeft: 2,
-          fontFamily: "var(--font-sans)",
-        }}>
-          {sender}
-        </span>
-      )}
       <div style={{
         padding: "9px 13px",
         borderRadius: 16,
@@ -161,39 +47,30 @@ export default function Chat() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState("conectando...");
   const [connected, setConnected] = useState(false);
-  const [nome, setNome] = useState(() => localStorage.getItem("chat_nome") || "");
-  const [showModal, setShowModal] = useState(() => !localStorage.getItem("chat_nome"));
   const stompRef = useRef(null);
   const bottomRef = useRef(null);
   const idRef = useRef(0);
-  const nomeRef = useRef(localStorage.getItem("chat_nome") || "");
-  const pendingSent = useRef(new Set()); // rastreia textos enviados para evitar duplicata do echo
+  const pendingRef = useRef(null);
 
-  const addMessage = useCallback((text, time, isMine, sender) => {
-    setMessages(prev => [...prev, { id: idRef.current++, text, time, isMine, sender }]);
+  const addMessage = useCallback((text, time, isMine) => {
+    setMessages(prev => [...prev, { id: idRef.current++, text, time, isMine }]);
   }, []);
 
-  // Carrega histórico
   useEffect(() => {
     fetch(`${BASE_URL}/api/messages`)
       .then(r => r.json())
       .then(data => {
-        const history = data.map(m => {
-          const isMine = m.usuario === nomeRef.current;
-          return {
-            id: idRef.current++,
-            text: m.message,
-            time: formatTime(m.localDateTime),
-            isMine,
-            sender: isMine ? null : (m.usuario || null),
-          };
-        });
+        const history = data.map(m => ({
+          id: idRef.current++,
+          text: m.message,
+          time: formatTime(m.localDateTime),
+          isMine: false,
+        }));
         setMessages(history);
       })
       .catch(() => {});
   }, []);
 
-  // Conexão WebSocket
   useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
@@ -202,19 +79,13 @@ export default function Chat() {
         setStatus("conectado");
         client.subscribe(TOPIC, (msg) => {
           const body = JSON.parse(msg.body);
-          const senderName = body.usuario || "";
-          const key = `${senderName}:${body.message}`;
-          // Se essa mensagem foi enviada por mim, ignora o echo
-          if (pendingSent.current.has(key)) {
-            pendingSent.current.delete(key);
-            return;
+
+          if (pendingRef.current) {
+            addMessage(pendingRef.current.text, pendingRef.current.time, true);
+            pendingRef.current = null;
+          } else {
+            addMessage(body.message, formatTime(body.localDateTime), false);
           }
-          addMessage(
-            body.message,
-            formatTime(body.localDateTime),
-            false,
-            senderName || null
-          );
         });
       },
       onDisconnect: () => {
@@ -233,30 +104,20 @@ export default function Chat() {
     return () => { client.deactivate(); };
   }, [addMessage]);
 
-  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
-
-  const handleNameConfirm = (name) => {
-    localStorage.setItem("chat_nome", name);
-    nomeRef.current = name; // atualiza ref imediatamente, sem esperar useEffect
-    setNome(name);
-    setShowModal(false);
-  };
 
   const send = () => {
     const text = input.trim();
     if (!text || !connected) return;
 
     const time = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-    const key = `${nomeRef.current}:${text}`;
-    pendingSent.current.add(key); // marca como enviada para ignorar o echo
-    addMessage(text, time, true, null);
+    pendingRef.current = { text, time };
 
     stompRef.current.publish({
       destination: DESTINATION,
-      body: JSON.stringify({ message: text, usuario: nomeRef.current }),
+      body: JSON.stringify({ message: text }),
     });
 
     setInput("");
@@ -277,10 +138,7 @@ export default function Chat() {
       borderRadius: "var(--border-radius-lg)",
       overflow: "hidden",
       fontFamily: "var(--font-sans)",
-      position: "relative",
     }}>
-      {showModal && <NameModal onConfirm={handleNameConfirm} />}
-
       <div style={{
         padding: "14px 20px",
         borderBottom: "0.5px solid var(--color-border-tertiary)",
@@ -296,25 +154,6 @@ export default function Chat() {
         <span style={{ fontSize: 14, fontWeight: 500, color: "var(--color-text-primary)" }}>
           Chat Geral
         </span>
-        {nome && (
-          <button
-            onClick={() => setShowModal(true)}
-            title="Trocar nome"
-            style={{
-              marginLeft: 6,
-              fontSize: 12,
-              color: "var(--color-text-tertiary)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "2px 6px",
-              borderRadius: 6,
-              fontFamily: "var(--font-sans)",
-            }}
-          >
-            {nome} ✏️
-          </button>
-        )}
         <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginLeft: "auto" }}>
           {status}
         </span>
@@ -334,7 +173,7 @@ export default function Chat() {
           </span>
         )}
         {messages.map(m => (
-          <Message key={m.id} text={m.text} time={m.time} isMine={m.isMine} sender={m.sender} />
+          <Message key={m.id} text={m.text} time={m.time} isMine={m.isMine} />
         ))}
         <div ref={bottomRef} />
       </div>
