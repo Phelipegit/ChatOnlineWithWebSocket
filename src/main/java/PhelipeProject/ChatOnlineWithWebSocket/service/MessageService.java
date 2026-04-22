@@ -19,17 +19,17 @@ public class MessageService {
     public MessageResponse enviarMensagem(MessageRequest messageRequest) {
 
         if(messageRequest.getMessage().isEmpty()) {
-            return new MessageResponse(false,"Mensagem vazia não é permitida");
+            return new MessageResponse(false,messageRequest.getUsuario(),"Mensagem vazia não é permitida");
         }
 
         if(messageRequest.getMessage().length() > 200) {
-            return new MessageResponse(false, "Mensagem muito grande");
+            return new MessageResponse(false,messageRequest.getUsuario(),"Mensagem muito grande");
         }
 
         EntityMessage entityMessage = new EntityMessage(messageRequest.getUsuario(),messageRequest.getMessage());
 
         messageRepository.save(entityMessage);
 
-        return new MessageResponse(true, messageRequest.getMessage());
+        return new MessageResponse(true,messageRequest.getUsuario(), messageRequest.getMessage());
     }
 }
