@@ -9,7 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.CrossOrigin;
 
 @Controller
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "https://phelipeprojectchat-tau.vercel.app/")
 public class ControllerMessage {
 
     private final MessageService messageService;
