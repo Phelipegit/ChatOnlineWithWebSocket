@@ -1,10 +1,9 @@
 package PhelipeProject.ChatOnlineWithWebSocket.model;
 
 import lombok.Getter;
-import org.springframework.cglib.core.Local;
-import org.springframework.web.bind.annotation.GetMapping;
 
-import java.time.LocalTime;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Getter
 public class MessageResponse {
@@ -13,11 +12,11 @@ public class MessageResponse {
 
     private String message;
 
-    private LocalTime localTime;
+    private LocalDateTime localDateTime;
 
     public MessageResponse(Boolean success, String message) {
         this.success = success;
         this.message = message;
-        this.localTime = LocalTime.now();
+        this.localDateTime = LocalDateTime.now(ZoneId.of("America/Campo_Grande"));
     }
 }
