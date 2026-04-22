@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-const BASE_URL = "http://localhost:8080";
+const BASE_URL = "https://chatonlinewithwebsocket.onrender.com";
 const WS_URL = `${BASE_URL}/chat`;
 const TOPIC = "/topic/chat";
 const DESTINATION = "/app/mensagem";
