@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Entity
@@ -26,7 +27,7 @@ public class EntityMessage {
     public EntityMessage(String usuario,String message) {
         this.usuario = usuario;
         this.message = message;
-        this.localDateTime = LocalDateTime.now();
+        this.localDateTime = LocalDateTime.now(ZoneId.of("America/Campo_Grande"));
     }
 
     public EntityMessage() {
