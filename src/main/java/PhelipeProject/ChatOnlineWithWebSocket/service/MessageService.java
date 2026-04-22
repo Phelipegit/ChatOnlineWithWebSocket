@@ -26,7 +26,7 @@ public class MessageService {
             return new MessageResponse(false, "Mensagem muito grande");
         }
 
-        EntityMessage entityMessage = new EntityMessage(messageRequest.getMessage());
+        EntityMessage entityMessage = new EntityMessage(messageRequest.getUsuario(),messageRequest.getMessage());
 
         messageRepository.save(entityMessage);
 

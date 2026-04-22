@@ -17,11 +17,14 @@ public class EntityMessage {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    private String usuario;
+
     private String message;
 
     private LocalDateTime localDateTime;
 
-    public EntityMessage(String message) {
+    public EntityMessage(String usuario,String message) {
+        this.usuario = usuario;
         this.message = message;
         this.localDateTime = LocalDateTime.now();
     }
