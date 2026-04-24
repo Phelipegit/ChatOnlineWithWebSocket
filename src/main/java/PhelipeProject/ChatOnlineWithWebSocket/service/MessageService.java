@@ -1,6 +1,8 @@
 package PhelipeProject.ChatOnlineWithWebSocket.service;
 
 import PhelipeProject.ChatOnlineWithWebSocket.entity.EntityMessage;
+import PhelipeProject.ChatOnlineWithWebSocket.exceptions.ExceptionMensagemGrande;
+import PhelipeProject.ChatOnlineWithWebSocket.exceptions.ExceptionMensagemVazia;
 import PhelipeProject.ChatOnlineWithWebSocket.model.MessageRequest;
 import PhelipeProject.ChatOnlineWithWebSocket.model.MessageResponse;
 import PhelipeProject.ChatOnlineWithWebSocket.repository.MessageRepository;
@@ -19,11 +21,11 @@ public class MessageService {
     public MessageResponse enviarMensagem(MessageRequest messageRequest) {
 
         if(messageRequest.getMessage().isEmpty()) {
-            return new MessageResponse(false,messageRequest.getUsuario(),"Mensagem vazia não é permitida");
+            throw new ExceptionMensagemVazia();
         }
 
         if(messageRequest.getMessage().length() > 200) {
-            return new MessageResponse(false,messageRequest.getUsuario(),"Mensagem muito grande");
+            throw new ExceptionMensagemGrande();
         }
 
         EntityMessage entityMessage = new EntityMessage(messageRequest.getUsuario(),messageRequest.getMessage());

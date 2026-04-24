@@ -1,7 +1,6 @@
 package PhelipeProject.ChatOnlineWithWebSocket.controller;
 
 import PhelipeProject.ChatOnlineWithWebSocket.entity.EntityMessage;
-import PhelipeProject.ChatOnlineWithWebSocket.model.MessageResponse;
 import PhelipeProject.ChatOnlineWithWebSocket.repository.MessageRepository;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,8 +22,8 @@ public class ControlerGetAll {
         return messageRepository.findAll();
     }
 
-    @DeleteMapping("/deletarall")
-    public void deletarMensagens() {
+    @GetMapping("/deletartudo")
+    public void deletarTudo() {
         messageRepository.deleteAll();
     }
 }
