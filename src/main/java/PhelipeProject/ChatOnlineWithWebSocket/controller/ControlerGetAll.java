@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "https://phelipeprojectchat-tau.vercel.app/")
+@CrossOrigin(origins = "https://phelipeprojectchat-tau.vercel.app",methods = {RequestMethod.GET,RequestMethod.DELETE})
 public class ControlerGetAll {
 
     private final MessageRepository messageRepository;
