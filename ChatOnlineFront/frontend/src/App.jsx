@@ -102,6 +102,119 @@ function NameModal({ onConfirm }) {
   );
 }
 
+function DeleteModal({ onClose }) {
+  const [senha, setSenha] = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleDelete = async () => {
+    await fetch(`${BASE_URL}/api/deletartudo`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation: senha }),
+    });
+    onClose();
+  };
+
+  const handleKey = (e) => {
+    if (e.key === "Enter") handleDelete();
+    if (e.key === "Escape") onClose();
+  };
+
+  return (
+    <div style={{
+      position: "absolute",
+      inset: 0,
+      background: "rgba(0,0,0,0.35)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 100,
+      borderRadius: "var(--border-radius-lg)",
+    }}>
+      <div style={{
+        background: "var(--color-background-primary)",
+        border: "0.5px solid var(--color-border-tertiary)",
+        borderRadius: 16,
+        padding: "28px 28px 24px",
+        width: 280,
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+      }}>
+        <div>
+          <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", fontFamily: "var(--font-sans)" }}>
+            Apagar mensagens
+          </p>
+          <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--color-text-tertiary)", fontFamily: "var(--font-sans)" }}>
+            Digite a senha de confirmação
+          </p>
+        </div>
+        <input
+          ref={inputRef}
+          type="password"
+          value={senha}
+          onChange={e => setSenha(e.target.value)}
+          onKeyDown={handleKey}
+          placeholder="Senha..."
+          style={{
+            padding: "9px 14px",
+            border: "0.5px solid var(--color-border-secondary)",
+            borderRadius: 10,
+            fontSize: 14,
+            background: "var(--color-background-secondary)",
+            color: "var(--color-text-primary)",
+            outline: "none",
+            fontFamily: "var(--font-sans)",
+          }}
+        />
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={onClose}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: 10,
+              border: "0.5px solid var(--color-border-secondary)",
+              background: "var(--color-background-secondary)",
+              color: "var(--color-text-primary)",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "var(--font-sans)",
+            }}
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={!senha.trim()}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: 10,
+              border: "none",
+              background: senha.trim() ? "#E24B4A" : "#B4B2A9",
+              color: "#fff",
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: senha.trim() ? "pointer" : "not-allowed",
+              fontFamily: "var(--font-sans)",
+              transition: "background 0.2s",
+            }}
+          >
+            Apagar tudo
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Message({ text, time, isMine, sender }) {
   return (
     <div style={{
@@ -150,6 +263,7 @@ export default function Chat() {
   const [connected, setConnected] = useState(false);
   const [nome, setNome] = useState(() => localStorage.getItem("chat_nome") || "");
   const [showModal, setShowModal] = useState(() => !localStorage.getItem("chat_nome"));
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const stompRef = useRef(null);
   const bottomRef = useRef(null);
   const idRef = useRef(0);
@@ -187,7 +301,6 @@ export default function Chat() {
         setStatus("conectado");
         client.subscribe(TOPIC, (msg) => {
           const body = JSON.parse(msg.body);
-
           if (pendingRef.current) {
             addMessage(pendingRef.current.text, formatTime(body.localDateTime), true, null);
             pendingRef.current = null;
@@ -226,14 +339,11 @@ export default function Chat() {
   const send = () => {
     const text = input.trim();
     if (!text || !connected) return;
-
     pendingRef.current = { text };
-
     stompRef.current.publish({
       destination: DESTINATION,
       body: JSON.stringify({ message: text, usuario: nomeRef.current }),
     });
-
     setInput("");
   };
 
@@ -255,6 +365,7 @@ export default function Chat() {
       position: "relative",
     }}>
       {showModal && <NameModal onConfirm={handleNameConfirm} />}
+      {showDeleteModal && <DeleteModal onClose={() => setShowDeleteModal(false)} />}
 
       <div style={{
         padding: "14px 20px",
@@ -293,6 +404,30 @@ export default function Chat() {
         <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginLeft: "auto" }}>
           {status}
         </span>
+        <button
+          onClick={() => setShowDeleteModal(true)}
+          title="Apagar todas as mensagens"
+          style={{
+            marginLeft: 8,
+            width: 28,
+            height: 28,
+            borderRadius: 8,
+            border: "0.5px solid var(--color-border-secondary)",
+            background: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E24B4A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" />
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+          </svg>
+        </button>
       </div>
 
       <div style={{

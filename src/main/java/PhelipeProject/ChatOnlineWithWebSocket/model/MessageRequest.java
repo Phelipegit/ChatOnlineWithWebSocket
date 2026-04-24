@@ -10,7 +10,6 @@ import lombok.Getter;
 public class MessageRequest {
 
     @NotBlank
-    @Size(max = 20)
     private String usuario;
 
     @NotBlank
