@@ -14,7 +14,7 @@ public class ServiceDeleteAllConfirmation {
         this.repository = repository;
     }
 
-    @Value(value = "${confirmation}")
+    @Value("${confirmation}")
     private String confirmation;
 
     public void deletarAll(ConfirmationRequest request) {
