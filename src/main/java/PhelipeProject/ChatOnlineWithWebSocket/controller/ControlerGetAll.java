@@ -2,6 +2,7 @@ package PhelipeProject.ChatOnlineWithWebSocket.controller;
 
 import PhelipeProject.ChatOnlineWithWebSocket.entity.EntityMessage;
 import PhelipeProject.ChatOnlineWithWebSocket.model.ConfirmationRequest;
+import PhelipeProject.ChatOnlineWithWebSocket.model.RecordDevolverMensagem;
 import PhelipeProject.ChatOnlineWithWebSocket.repository.MessageRepository;
 import PhelipeProject.ChatOnlineWithWebSocket.service.ServiceDeleteAllConfirmation;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +24,8 @@ public class ControlerGetAll {
     }
 
     @GetMapping("/messages")
-    public List<EntityMessage> getAllMessages() {
-        return messageRepository.findAll();
+    public List<RecordDevolverMensagem> getAllMessages() {
+        return messageRepository.findAll().stream().map(message -> new RecordDevolverMensagem(message.getLocalDateTime(),message.getMessage(),message.getUsuario())).toList();
     }
 
     @DeleteMapping("/deletartudo")
